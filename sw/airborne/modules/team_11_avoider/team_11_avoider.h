@@ -24,6 +24,8 @@ extern int floor_upper_treshold;
 extern int floor_lower_treshold;
 extern float gain;
 extern uint8_t debug_enabled;
+extern float heading;
+extern float target_speed;
 
 
 #endif /* SW_AIRBORNE_MODULES_TEAM_11_AVOIDER_TEAM_11_AVOIDER_H_ */

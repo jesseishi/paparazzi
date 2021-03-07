@@ -25,7 +25,6 @@ void stepper_reset() {
 }
 void stepper_periodic() {
 
-	PRINT ("HERE\n");
 	if (stepsx > 0) {
 		*xsetting = stepper_velx;
 		stepsx--;
