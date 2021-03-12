@@ -4,15 +4,21 @@
  *  Created on: Mar 6, 2021
  *      Author: adam
  */
+
+/*This module enables setting velocities in body frame for
+ * certain amount of time steps. The step is counted as every call
+ * of stepper_periodic() function.
+ */
 #include "stepper.h"
 
 int stepsx;
 int stepsy;
-static uint8_t stepper_enabled = 0;
 float stepper_velx = 0.1, stepper_vely = 0.1;
 static float *xsetting;
 static float *ysetting;
 
+//pass pointers variables containing reference
+//velocities
 void stepper_init(float *xset, float *yset) {
 
 	xsetting = xset;
@@ -23,6 +29,8 @@ void stepper_reset() {
 	stepsx = 0;
 	stepsy = 0;
 }
+
+//
 void stepper_periodic() {
 
 	if (stepsx > 0) {
@@ -45,12 +53,7 @@ void stepper_periodic() {
 	}
 
 }
-void stepper_enable() {
-	stepper_enabled = 1;
-}
-void stepper_disable() {
-	stepper_enabled = 0;
-}
+
 void stepper_set_vel(float x, float y) {
 	if (x > 0.0 && y > 0.0) {
 		stepper_velx = x;

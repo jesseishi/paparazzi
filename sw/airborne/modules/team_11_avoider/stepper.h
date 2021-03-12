@@ -13,8 +13,6 @@
 void stepper_init(float*, float *);
 void stepper_reset();
 void stepper_periodic();
-void stepper_enable();
-void stepper_disable();
 void stepper_set_vel(float, float);
 
 extern int stepsx, stepsy;
