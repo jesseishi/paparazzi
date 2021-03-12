@@ -20,9 +20,7 @@
 extern void team_11_avoider_init(void);
 extern void team_11_avoider_periodic(void);
 
-extern int floor_upper_treshold;
-extern int floor_lower_treshold;
-extern float gain;
+
 extern uint8_t debug_enabled;
 extern float heading;
 extern float target_speed;

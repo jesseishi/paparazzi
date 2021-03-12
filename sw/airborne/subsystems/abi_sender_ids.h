@@ -491,4 +491,12 @@
 #define JOYSTICK_ID 1
 #endif
 
+/*
+ * Floor detection message(message 29)
+ */
+#ifndef FLOOR_DETECTION_ID
+#define FLOOR_DETECTION_ID 1
+#endif
+
+
 #endif /* ABI_SENDER_IDS_H */

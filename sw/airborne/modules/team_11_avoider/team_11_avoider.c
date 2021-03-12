@@ -18,41 +18,16 @@ enum navigation_state_t {
 	SAFE, AVOID
 };
 enum navigation_state_t navigation_state = AVOID;
-abi_event bottom_cam_color_detection_ev;
-int32_t floor_count;
-int16_t floor_x;
-int16_t floor_y;
-float oag_color_count_frac = 0.1;
-int floor_upper_treshold = 56600;
-int floor_lower_treshold = 56100;
-float gain = 0.2;
+
 float velocityx = 0.0, velocityy = 0.0;
-uint8_t debug_enabled;
 float heading = 0;
-float target_speed = 1;
-static void bottom_cam_color_detection_cb(
-		uint8_t __attribute__((unused)) sender_id, int16_t pixel_x,
-		int16_t pixel_y, int16_t __attribute__((unused)) pixel_width,
-		int16_t __attribute__((unused)) pixel_height, int32_t quality,
-		int16_t __attribute__((unused)) extra) {
-	floor_count = quality;
-	floor_x = pixel_x;
-	floor_y = pixel_y;
+uint8_t debug_enabled;
+abi_event floor_detection_ev;
 
+static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
+		float test_abi_field) {
+	PRINT("FLOOR Received: %f\n", test_abi_field);
 }
-
-// This call back will be used to receive the color count from the orange detector
-#ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
-#error Define ORANGE_AVOIDER_VISUAL_DETECTION_ID
-#endif
-
-#ifndef FLOOR_FRONT_CAM_VISUAL_DETECTION_ID
-#error Define FLOOR_FRONT_CAM_VISUAL_DETECTION_ID
-#endif
-
-#ifndef FLOOR_BOTTOM_CAM_VISUAL_DETECTION_ID
-#error Define FLOOR_BOTTOM_CAM_VISUAL_DETECTION_ID
-#endif
 
 /*
  * Initialisation function
@@ -62,9 +37,8 @@ void team_11_avoider_init(void) {
 	srand(time(NULL));
 	stepper_init(&velocityx, &velocityy);
 	// bind our colorfilter callbacks to receive the color filter outputs
-	AbiBindMsgVISUAL_DETECTION(FLOOR_BOTTOM_CAM_VISUAL_DETECTION_ID,
-			&bottom_cam_color_detection_ev, bottom_cam_color_detection_cb);
-	//AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
+	AbiBindMsgFLOOR_DETECTION(FLOOR_DETECTION_ID, &floor_detection_ev,
+			floor_detection_cb);
 }
 
 /*
@@ -84,45 +58,14 @@ void team_11_avoider_periodic(void) {
 	} else {
 		switch (navigation_state) {
 		case SAFE:
-			PRINT("STATE: SAFE");
-			if (floor_count < floor_lower_treshold) {
-				navigation_state = AVOID;
-			} else {
-				//normalize speed
-				float totalsetspeed = sqrtf(
-						velocityx * velocityx + velocityy * velocityy);
-				if (totalsetspeed > 0.1) {
-					velocityx = velocityx * target_speed / totalsetspeed;
-					velocityy = velocityy * target_speed / totalsetspeed;
-				}
-			}
 			break;
 		case AVOID:
-			PRINT("STATE: AVOID");
-			if (floor_count > floor_upper_treshold) {
-				navigation_state = SAFE;
-
-			} else {
-				//x y axes are switched
-				velocityx = gain * ((float) floor_y);
-				velocityy = gain * ((float) floor_x);
-			}
 			break;
 		default:
 			break;
-			}
-		if (fabsf(velocityx) < 0.05 && fabsf(velocityy) < 0.05) {
-						PRINT("WAKE-UP CALL\n");
-						int direction = rand() % 365;
-						float angle = ((float) direction) * M_PI / 180;
-
-						velocityx = target_speed * cosf(angle);
-						velocityy = target_speed * sinf(angle);
 		}
+		guidance_h_set_guided_body_vel(velocityx, velocityy);
+		return;
 	}
-
-	guidance_h_set_guided_body_vel(velocityx, velocityy);
-	PRINT("FILTER: %d %4f %4f\n", floor_count, velocityx, velocityy);
-	return;
 }
 
