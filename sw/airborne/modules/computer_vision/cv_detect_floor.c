@@ -138,7 +138,7 @@ void color_filter(struct image_t *img, color_t color,
 				vp = &buffer[y * 2 * img->w + 2 * x];      // V
 				yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
 			}
-			if ((*ypor >= y_low) && (*yp <= y_high) && (*up >= v_low)
+			if ((*yp >= y_low) && (*yp <= y_high) && (*up >= v_low)
 					&& (*up <= u_high) && (*vp >= v_low) && (*vp <= v_high)) {
 				*filtered[x][y] = true;
 			} else {
