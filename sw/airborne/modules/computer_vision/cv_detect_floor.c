@@ -68,7 +68,6 @@ static struct image_t *floor_detector(struct image_t *img) {
 	 */
 
 	//int cost = -floor_per_heading * (1-orange_per_heading)
-
 	return img;
 }
 
@@ -139,7 +138,7 @@ void color_filter(struct image_t *img, color_t color,
 				vp = &buffer[y * 2 * img->w + 2 * x];      // V
 				yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
 			}
-			if ((*ypor; >= y_low) && (*yp <= y_high) && (*up >= v_low)
+			if ((*ypor >= y_low) && (*yp <= y_high) && (*up >= v_low)
 					&& (*up <= u_high) && (*vp >= v_low) && (*vp <= v_high)) {
 				*filtered[x][y] = true;
 			} else {
@@ -151,12 +150,12 @@ void color_filter(struct image_t *img, color_t color,
 		}
 	}
 }
+
 void mat_eliminator(filtered_image_t* filtered) {
 	/*Mat eliminator*/
 	for (int y = 0; y < image_h; y++) {
-		for (int x = 0; x < image_w/ 2; x++) {
-			if (filtered[x][y] == true
-					&& filtered[x - 1][y] == false) {
+		for (int x = 0; x < image_w / 2; x++) {
+			if (filtered[x][y] == true && filtered[x - 1][y] == false) {
 				for (int i = 0; i < x; i++) {
 					filtered[i][y] = true;
 				}
@@ -164,7 +163,6 @@ void mat_eliminator(filtered_image_t* filtered) {
 		}
 	}
 }
-void count_per_heading(filtered_image_t* filtered, uint16_t *sum)
-{
+void count_per_heading(filtered_image_t* filtered, uint16_t *sum) {
 
 }
