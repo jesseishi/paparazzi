@@ -22,28 +22,56 @@
 #define VERBOSE_PRINT(...)
 #endif
 
-static pthread_mutex_t mutex;
-float fd_test_setting = 0.0;
 #ifndef FLOOR_OBJECT_DETECTOR_FPS
 #define FLOOR_OBJECT_DETECTOR_FPS 0 ///< Default FPS (zero means run at camera fps)
 #endif
+
+//h = 520, w = 240
+#define image_h 520
+#define image_w 240
 
 typedef enum {
 	orange_real, green_real, orange_sim, green_sim
 } color_t;
 
-#define image_h 520
-#define image_w 240
+uint8_t orange_real_y_low = 40;
+uint8_t orange_real_y_high = 200;
+uint8_t orange_real_u_low = 0;
+uint8_t orange_real_u_high = 150;
+uint8_t orange_real_v_low = 140;
+uint8_t orange_real_v_high = 220;
+uint8_t green_real_y_low = 70;
+uint8_t green_real_y_high = 95;
+uint8_t green_real_u_low = 100;
+uint8_t green_real_u_high = 150;
+uint8_t green_real_v_low = 100;
+uint8_t green_real_v_high = 132;
+uint8_t orange_sim_y_low = 40;
+uint8_t orange_sim_y_high = 200;
+uint8_t orange_sim_u_low = 0;
+uint8_t orange_sim_u_high = 150;
+uint8_t orange_sim_v_low = 140;
+uint8_t orange_sim_v_high = 220;
+uint8_t green_sim_y_low = 0;
+uint8_t green_sim_y_high = 100;
+uint8_t green_sim_u_low = 0;
+uint8_t green_sim_u_high = 120;
+uint8_t green_sim_v_low = 0;
+uint8_t green_sim_v_high = 130;
 
-typedef bool filtered_image_t[image_h][image_w];
+static pthread_mutex_t mutex;
+float fd_reference_heading = 0.0;
+
+//typedef bool filtered_image_t[image_h][image_w];
 bool filtered_image[4];
 
-void count_per_heading(filtered_image_t* filtered, uint16_t *sum);
+void count_per_heading(bool filtered[image_h][image_w], uint16_t *sum,
+		uint16_t h, uint16_t w);
 
-void mat_eliminator(filtered_image_t* filtered);
+void mat_eliminator(bool filtered[image_h][image_w]);
 
 void color_filter(struct image_t *img, color_t color,
-		filtered_image_t *filtered);
+bool filtered[image_h][image_w]);
 static struct image_t *floor_detector(struct image_t *img);
 
 void floor_detector_init(void) {
@@ -51,29 +79,47 @@ void floor_detector_init(void) {
 	cv_add_to_device(&front_camera, floor_detector, FLOOR_OBJECT_DETECTOR_FPS);
 }
 void floor_detector_periodic(void) {
-	AbiSendMsgFLOOR_DETECTION(FLOOR_DETECTION_ID, fd_test_setting);
+	AbiSendMsgFLOOR_DETECTION(FLOOR_DETECTION_ID, fd_reference_heading);
 }
 static struct image_t *floor_detector(struct image_t *img) {
 
-	filtered_image_t im_floor;
-	color_filter(*img, green_real, &im_floor);
-	mat_eliminator(&im_floor);
+	bool im_floor[image_h][image_w];
+	color_filter(img, green_sim, im_floor);
+
+	mat_eliminator(im_floor);
 	uint16_t floor_per_heading[image_h]; //or image_v
-	count_per_heading(im_floor, &floor_per_heading);
+	count_per_heading(im_floor, &floor_per_heading[0], image_h, image_w);
 	//Copy the image, but be careful, only the pointer to the buffer
 	//has been copied
-	struct image_t slice_image = img;
-	/*TODO. Create new buffer and change
-	 * sizes
-	 */
+	//struct image_t slice_image = *img; //something wrong with that
+	//TODO. Create new buffer to make a slice
+	//and call color filter once again
+	//img->w = 1;
 
-	//int cost = -floor_per_heading * (1-orange_per_heading)
+	uint16_t orange_per_heading[image_h];	//not initialized now
+	//memset(orange_per_heading,0,image_h*sizeof(orange_per_heading[0]));
+	int16_t cost[image_h];
+	for (int i = 0; i < image_h; i++) {
+		cost[i] = -floor_per_heading[i] * (1 - orange_per_heading[i]);
+	}
+
+	int rolling_length = 25;
+	float cost_rolling_ave[image_h];
+	cost_rolling_ave[0] = (float) cost[0] / rolling_length;
+	for (int i = 1; i < image_h; i++) {
+		cost_rolling_ave[i] = cost_rolling_ave[i - 1]
+				+ (float) cost[i] / rolling_length;
+	}
+	int16_t best_heading = 0;
+	//calculate minimum
+	float magic_scale_factor = 0.1;
+	fd_reference_heading = (float)(best_heading - image_h / 2)* magic_scale_factor;
 	return img;
+
 }
 
-//h = 520, w = 240
 void color_filter(struct image_t *img, color_t color,
-		filtered_image_t *filtered) {
+bool filtered[image_h][image_w]) {
 
 	uint8_t y_low = 0;
 	uint8_t y_high = 0;
@@ -84,36 +130,36 @@ void color_filter(struct image_t *img, color_t color,
 
 	switch (color) {
 	case orange_real:
-		y_low = 40;
-		y_high = 200;
-		u_low = 0;
-		u_high = 150;
-		v_low = 140;
-		v_high = 220;
+		y_low = orange_real_y_low;
+		y_high = orange_real_y_high;
+		u_low = orange_real_u_low;
+		u_high = orange_real_u_high;
+		v_low = orange_real_v_low;
+		v_high = orange_real_v_high;
 		break;
 	case green_real:
-		y_low = 70;
-		y_high = 95;
-		u_low = 100;
-		u_high = 150;
-		v_low = 100;
-		v_high = 132;
+		y_low = green_real_y_low;
+		y_high = green_real_y_high;
+		u_low = green_real_u_low;
+		u_high = green_real_u_high;
+		v_low = green_real_v_low;
+		v_high = green_real_v_high;
 		break;
 	case orange_sim:
-		y_low = 40;
-		y_high = 200;
-		u_low = 0;
-		u_high = 150;
-		v_low = 140;
-		v_high = 220;
+		y_low = orange_sim_y_low;
+		y_high = orange_sim_y_high;
+		u_low = orange_sim_u_low;
+		u_high = orange_sim_u_high;
+		v_low = orange_sim_v_low;
+		v_high = orange_sim_v_high;
 		break;
 	case green_sim:
-		y_low = 0;
-		y_high = 100;
-		u_low = 0;
-		u_high = 120;
-		v_low = 0;
-		v_high = 130;
+		y_low = green_sim_y_low;
+		y_high = green_sim_y_high;
+		u_low = green_sim_u_low;
+		u_high = green_sim_u_high;
+		v_low = green_sim_v_low;
+		v_high = green_sim_v_high;
 		break;
 	default:
 		PRINT("Don't have the color build in yet");
@@ -138,31 +184,42 @@ void color_filter(struct image_t *img, color_t color,
 				vp = &buffer[y * 2 * img->w + 2 * x];      // V
 				yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
 			}
-			if ((*yp >= y_low) && (*yp <= y_high) && (*up >= v_low)
+			if ((*yp >= y_low) && (*yp <= y_high) && (*up >= u_low)
 					&& (*up <= u_high) && (*vp >= v_low) && (*vp <= v_high)) {
-				*filtered[x][y] = true;
+				filtered[y][x] = true;
 			} else {
-				*filtered[x][y] = false;
+				filtered[y][x] = false;
 			}
 			/*				if (draw) {
 			 *yp = 255;  // make pixel brighter in image
 			 }*/
 		}
 	}
+
+	return;
 }
 
-void mat_eliminator(filtered_image_t* filtered) {
+void mat_eliminator(bool filtered[image_h][image_w]) {
 	/*Mat eliminator*/
 	for (int y = 0; y < image_h; y++) {
-		for (int x = 0; x < image_w / 2; x++) {
-			if (filtered[x][y] == true && filtered[x - 1][y] == false) {
-				for (int i = 0; i < x; i++) {
-					filtered[i][y] = true;
+		for (int x = 1; x < image_w / 2; x++) {
+			if (filtered[y][x] == true && filtered[y][x - 1] == false) {
+				for (int i = 0; i <= x; i++) {
+					filtered[y][i] = true;
 				}
 			}
 		}
 	}
+	return;
 }
-void count_per_heading(filtered_image_t* filtered, uint16_t *sum) {
+void count_per_heading(bool filtered[image_h][image_w], uint16_t *sum,
+		uint16_t h, uint16_t w) {
 
+	for (int y = 0; y < h; y++) {
+		sum[y] = 0;
+		for (int x = 0; x < w; x++) {
+			sum[y] += filtered[y][x];
+		}
+	}
+	return;
 }

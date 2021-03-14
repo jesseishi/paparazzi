@@ -1,31 +1,87 @@
 <!DOCTYPE module SYSTEM "module.dtd">
 
 <module name="cv_detect_floor" dir="computer_vision">
-  <doc>
-    <description>Floor detector
-    
-    </description>
-    <define name="FLOOR_DETECTOR_FPS" value="0" description="Desired FPS (0: camera rate)"/>
-  </doc>
+	<doc>
+		<description>Floor detector
 
-  <settings>
-    <dl_settings>
-      <dl_settings name="FloorDetector">
-         <dl_setting var="fd_test_setting" min="0" step="0.1" max="359.9" shortname="test"/>
-      </dl_settings>
-    </dl_settings>
-  </settings>
+		</description>
+		<define name="FLOOR_DETECTOR_FPS" value="0"
+			description="Desired FPS (0: camera rate)" />
+	</doc>
 
-  <depends>video_thread</depends>
+	<settings>
+		<dl_settings>
+			<dl_settings name="FloorDetector">
+				<dl_settings name="OrangeReal">
+					<dl_setting var="orange_real_y_low" min="0" step="1"
+						max="255" shortname="ylow" />
+					<dl_setting var="orange_real_y_high" min="0" step="1"
+						max="255" shortname="yhigh" />
+					<dl_setting var="orange_real_u_low" min="0" step="1"
+						max="255" shortname="ulow" />
+					<dl_setting var="orange_real_u_high" min="0" step="1"
+						max="255" shortname="uhigh" />
+					<dl_setting var="orange_real_v_low" min="0" step="1"
+						max="255" shortname="vlow" />
+					<dl_setting var="orange_real_v_high" min="0" step="1"
+						max="255" shortname="vhigh" />
+				</dl_settings>
+				<dl_settings name="OrangeSim">
+					<dl_setting var="orange_sim_y_low" min="0" step="1"
+						max="255" shortname="ylow" />
+					<dl_setting var="orange_sim_y_high" min="0" step="1"
+						max="255" shortname="yhigh" />
+					<dl_setting var="orange_sim_u_low" min="0" step="1"
+						max="255" shortname="ulow" />
+					<dl_setting var="orange_sim_u_high" min="0" step="1"
+						max="255" shortname="uhigh" />
+					<dl_setting var="orange_sim_v_low" min="0" step="1"
+						max="255" shortname="vlow" />
+					<dl_setting var="orange_sim_v_high" min="0" step="1"
+						max="255" shortname="vhigh" />
+				</dl_settings>
+				<dl_settings name="GreenReal">
+					<dl_setting var="green_real_y_low" min="0" step="1"
+						max="255" shortname="ylow" />
+					<dl_setting var="green_real_y_high" min="0" step="1"
+						max="255" shortname="yhigh" />
+					<dl_setting var="green_real_u_low" min="0" step="1"
+						max="255" shortname="ulow" />
+					<dl_setting var="green_real_u_high" min="0" step="1"
+						max="255" shortname="uhigh" />
+					<dl_setting var="green_real_v_low" min="0" step="1"
+						max="255" shortname="vlow" />
+					<dl_setting var="green_real_v_high" min="0" step="1"
+						max="255" shortname="vhigh" />
+				</dl_settings>
+				<dl_settings name="GreenSim">
+					<dl_setting var="green_sim_y_low" min="0" step="1"
+						max="255" shortname="ylow" />
+					<dl_setting var="green_sim_y_high" min="0" step="1"
+						max="255" shortname="yhigh" />
+					<dl_setting var="green_sim_u_low" min="0" step="1"
+						max="255" shortname="ulow" />
+					<dl_setting var="green_sim_u_high" min="0" step="1"
+						max="255" shortname="uhigh" />
+					<dl_setting var="green_sim_v_low" min="0" step="1"
+						max="255" shortname="vlow" />
+					<dl_setting var="green_sim_v_high" min="0" step="1"
+						max="255" shortname="vhigh" />
+				</dl_settings>
+			</dl_settings>
+		</dl_settings>
+	</settings>
 
-  <header>
-    <file name="cv_detect_floor.h"/>
-  </header>
+	<depends>video_thread</depends>
 
-  <init fun="floor_detector_init()"/>
-  <periodic fun="floor_detector_periodic()" freq="50"/>
-  <makefile target="ap|nps">
-    <file name="cv_detect_floor.c"/>
-  </makefile>
+	<header>
+		<file name="cv_detect_floor.h" />
+	</header>
+
+	<init fun="floor_detector_init()" />
+	<periodic fun="floor_detector_periodic()" freq="10" />
+	<makefile target="ap|nps">
+		<file name="cv_detect_floor.c" />
+	</makefile>
 </module>
 

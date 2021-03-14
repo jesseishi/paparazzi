@@ -31,7 +31,7 @@ Create description
     <file name="defines.h"/>
   </header>
   <init fun="team_11_avoider_init()"/>
-  <periodic fun="team_11_avoider_periodic()" freq="10"/>
+  <periodic fun="team_11_avoider_periodic()" freq="4"/>
   <makefile target="ap|nps">
     <file name="team_11_avoider.c"/>
     <file name="stepper.c"/>

@@ -25,8 +25,8 @@ uint8_t debug_enabled;
 abi_event floor_detection_ev;
 
 static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
-		float test_abi_field) {
-	PRINT("FLOOR Received: %f\n", test_abi_field);
+		float fd_reference_heading) {
+	//PRINT("FLOOR Received: %f\n", test_abi_field);
 }
 
 /*
@@ -64,8 +64,8 @@ void team_11_avoider_periodic(void) {
 		default:
 			break;
 		}
-		guidance_h_set_guided_body_vel(velocityx, velocityy);
 		return;
 	}
+	guidance_h_set_guided_body_vel(velocityx, velocityy);
 }
 

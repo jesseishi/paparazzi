@@ -205,7 +205,7 @@
     </message>
     
     <message name="FLOOR_DETECTION" id="29">
-    	<field name="test_abi_field"	type="float">test field</field>
+    	<field name="fd_reference_heading"	type="float">test field</field>
     </message>
 
   </msg_class>
