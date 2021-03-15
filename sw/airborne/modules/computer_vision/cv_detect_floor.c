@@ -65,30 +65,41 @@ float fd_reference_heading = 0.0;
 //typedef bool filtered_image_t[image_h][image_w];
 bool filtered_image[4];
 
+// Declare functions.
 void count_per_heading(bool filtered[image_h][image_w], uint16_t *sum,
-		uint16_t h, uint16_t w);
+                       uint16_t h, uint16_t w);
 
 void mat_eliminator(bool filtered[image_h][image_w]);
 
 void color_filter(struct image_t *img, color_t color,
-bool filtered[image_h][image_w]);
+                  bool filtered[image_h][image_w]);
+
 static struct image_t *floor_detector(struct image_t *img);
 
+// Define functions.
 void floor_detector_init(void) {
 	/*Front camera always*/
 	cv_add_to_device(&front_camera, floor_detector, FLOOR_OBJECT_DETECTOR_FPS);
 }
+
 void floor_detector_periodic(void) {
 	AbiSendMsgFLOOR_DETECTION(FLOOR_DETECTION_ID, fd_reference_heading);
 }
+
 static struct image_t *floor_detector(struct image_t *img) {
 
+	// img is the image the front camera sees, but rotated by 90 deg counter clockwise.
+	// However, the width and height (and corresponding [x,y] coordinates) are defined
+	// on this rotated image as normally. Furthermore, the image buffer (as used in color_filter())
+	// is defined as a 1D array with slices in width. So to stay consistent with that,
+	// we'll make 2D arrays with [image_h][image_w].
 	bool im_floor[image_h][image_w];
 	color_filter(img, green_sim, im_floor);
 
 	mat_eliminator(im_floor);
-	uint16_t floor_per_heading[image_h]; //or image_v
-	count_per_heading(im_floor, &floor_per_heading[0], image_h, image_w);
+
+	uint16_t floor_per_heading[image_h]; // Since the image is rotated, the height spans all headings.
+	count_per_heading(im_floor, floor_per_heading, image_h, image_w);
 	//Copy the image, but be careful, only the pointer to the buffer
 	//has been copied
 	//struct image_t slice_image = *img; //something wrong with that
@@ -108,18 +119,18 @@ static struct image_t *floor_detector(struct image_t *img) {
 	cost_rolling_ave[0] = (float) cost[0] / rolling_length;
 	for (int i = 1; i < image_h; i++) {
 		cost_rolling_ave[i] = cost_rolling_ave[i - 1]
-				+ (float) cost[i] / rolling_length;
+				+ (float) cost[i] / rolling_length; // TODO: - cost[i-25] / rolling_length or something like that.
 	}
 	int16_t best_heading = 0;
 	//calculate minimum
 	float magic_scale_factor = 0.1;
 	fd_reference_heading = (float)(best_heading - image_h / 2)* magic_scale_factor;
-	return img;
+	return img; //TODO: draw in the image so that we can see what this algorithm did.
 
 }
 
 void color_filter(struct image_t *img, color_t color,
-bool filtered[image_h][image_w]) {
+                  bool filtered[image_h][image_w]) {
 
 	uint8_t y_low = 0;
 	uint8_t y_high = 0;
@@ -190,9 +201,6 @@ bool filtered[image_h][image_w]) {
 			} else {
 				filtered[y][x] = false;
 			}
-			/*				if (draw) {
-			 *yp = 255;  // make pixel brighter in image
-			 }*/
 		}
 	}
 
