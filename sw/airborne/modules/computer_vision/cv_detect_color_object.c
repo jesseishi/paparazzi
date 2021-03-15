@@ -284,6 +284,12 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
           *yp = 255;  // make pixel brighter in image
         }
       }
+      
+      // Every 10 pixels we want to draw a line and check if this is then horizontal or vertical
+      // since the picture is rotated.
+      if (y % 10 == 0) {
+        *yp = 0;
+      }
     }
   }
   if (cnt > 0) {
