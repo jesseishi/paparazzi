@@ -82,8 +82,16 @@ void calculate_rolling_average(float *cost_rolling_ave,
 
 int16_t argmin(float *cost_rolling_ave);
 
-void draw_on_image(struct image_t *img, bool filtered[image_h][image_w],
-		int16_t best_heading);
+void draw_on_image(
+		struct image_t *img,
+		bool im_floor[image_h][image_w],
+		bool im_orange[image_h][image_w],
+		int16_t cost[image_h],
+		float cost_rolling_ave[image_h],
+		uint16_t best_heading);
+
+int16_t arr_max_int16_t(int16_t arr[image_h], uint16_t length);
+int16_t arr_min_int16_t(int16_t arr[image_h], uint16_t length);
 
 static struct image_t *floor_detector(struct image_t *img);
 
@@ -108,6 +116,8 @@ static struct image_t *floor_detector(struct image_t *img) {
 	// 1) Filter the camera feed to detect obstacles //
 	///////////////////////////////////////////////////
 
+	// We'll use floor detection and orange detection.
+
 	// img is the image the front camera sees, but rotated by 90 deg counter clockwise.
 	// However, the width and height (and corresponding [x,y] coordinates) are defined
 	// on this rotated image as normally. Furthermore, the image buffer (as used in color_filter())
@@ -124,15 +134,22 @@ static struct image_t *floor_detector(struct image_t *img) {
 	uint16_t floor_per_heading[image_h]; // Since the image is rotated, the height spans all headings.
 	count_per_heading(im_floor, floor_per_heading, image_h, image_w);
 
-	//Copy the image, but be careful, only the pointer to the buffer
-	//has been copied
-	//struct image_t slice_image = *img; //something wrong with that
-	//TODO. Create new buffer to make a slice
-	//and call color filter once again
-	//img->w = 1;
+	// Orange detector.
+	// TODO: We originally wanted to only look at one vertical slice in the image.
+	bool im_orange[image_h][image_w];
+	color_filter(img, orange_sim, im_orange);
 
-	uint16_t orange_per_heading[image_h];	//not initialized now
-	//memset(orange_per_heading,0,image_h*sizeof(orange_per_heading[0]));
+	// For each heading, count the amount of orange.
+	uint16_t orange_per_heading[image_h];
+	count_per_heading(im_orange, orange_per_heading, image_h, image_w);
+
+	// Make this into a binary array b/c that's how we prototyped it in Python.
+	// TODO: so maybe it's good to change it.
+	for (uint16_t i = 0; i < image_h; i++) {
+		if (orange_per_heading[i] > 0) {
+			orange_per_heading[i] = 1;
+		}
+	}
 
 
 	////////////////////////////////////////////////////
@@ -165,7 +182,7 @@ static struct image_t *floor_detector(struct image_t *img) {
 	// Before we return, we put some useful stuff in the image.
 	bool draw = true;  // TODO: Make an input to this function.
 	if (draw) {
-		draw_on_image(img, im_floor, best_heading);
+		draw_on_image(img, im_floor, im_orange, cost, cost_rolling_ave, best_heading);
 	}
 
 	return img;
@@ -276,12 +293,11 @@ void count_per_heading(bool filtered[image_h][image_w], uint16_t *sum,
 }
 
 void cost_function(uint16_t floor_per_heading[image_h],
-		uint16_t orange_per_heading[image_h], int16_t *cost) {
+		uint16_t orange_per_heading_binary[image_h], int16_t *cost) {
 
 	// TODO: documentation.
-	// Assumes orange_per_heading is binary.
 	for (int i = 0; i < image_h; i++) {
-		cost[i] = -floor_per_heading[i] * (1 - orange_per_heading[i]);
+		cost[i] = -floor_per_heading[i] * (1 - orange_per_heading_binary[i]);
 
 	}
 }
@@ -329,8 +345,18 @@ int16_t argmin(float *cost_rolling_ave) {
 	return i_min;
 }
 
-void draw_on_image(struct image_t *img, bool filtered[image_h][image_w],
-		int16_t best_heading) {
+void draw_on_image(
+		struct image_t *img,
+		bool im_floor[image_h][image_w],
+		bool im_orange[image_h][image_w],
+		int16_t cost[image_h],
+		float cost_rolling_ave[image_h],
+		uint16_t best_heading) {
+
+	// We want to show the parts that we detect but also the cost function.
+	// For each heading we'll draw a black pixel for the cost normalized on image_w.
+	int16_t highest_cost = (int16_t) arr_max_int16_t(cost, image_h);
+	int16_t lowest_cost  = (int16_t) arr_min_int16_t(cost, image_h);
 
 	uint8_t *buffer = img->buf;
 
@@ -338,18 +364,52 @@ void draw_on_image(struct image_t *img, bool filtered[image_h][image_w],
 		for (uint16_t y = 0; y < img->h; y++) {
 			for (uint16_t x = 0; x < img->w; x++) {
 
-				// If we think it is floor, make it black.
-				if (filtered[y][x]) {
-					buffer[y * 2 * img->w + 2 * x + 1] = 0;
+				// If we think it is floor, make it dark.
+				if (im_floor[y][x]) {
+					buffer[y * 2 * img->w + 2 * x + 1] = 20;
+				}
+				// If we think it is an orange obstacle, make it light.
+				if (im_orange[y][x]) {
+					buffer[y * 2 * img->w + 2 * x + 1] = 255-20;
 				}
 
 				// If we think it is the best heading, make it white (on all x's).
 				if (y == best_heading) {
 					buffer[y * 2 * img->w + 2 * x + 1] = 255;
 				}
+
+				// Let's print the cost function on the image with a black line.
+				uint16_t x_cost = (cost[y] - lowest_cost) / highest_cost * image_w;
+				buffer[y * 2 * img->w + 2 * x_cost + 1] = 0;
 			}
 
 		}
 
 	return;
 }
+
+// TODO: Do we really need to implement this ourselves?
+int16_t arr_max_int16_t(int16_t arr[image_h], uint16_t length) {
+	int16_t max = -32000;  // There must be a better way.
+	for (uint16_t i = 0; i < length; i++) {
+		if (arr[i] > max) {
+			max = arr[i];
+		}
+	}
+
+	return max;
+}
+
+
+int16_t arr_min_int16_t(int16_t arr[image_h], uint16_t length) {
+	int16_t min = 32000;  // There must be a better way.
+	for (uint16_t i = 0; i < length; i++) {
+		if (arr[i] < min) {
+			min = arr[i];
+		}
+	}
+
+	return min;
+}
+
+
