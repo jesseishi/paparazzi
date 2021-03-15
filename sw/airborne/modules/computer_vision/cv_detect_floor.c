@@ -377,11 +377,13 @@ void draw_on_image(
 				if (y == best_heading) {
 					buffer[y * 2 * img->w + 2 * x + 1] = 255;
 				}
-
-				// Let's print the cost function on the image with a black line.
-				uint16_t x_cost = (cost[y] - lowest_cost) / highest_cost * image_w;
-				buffer[y * 2 * img->w + 2 * x_cost + 1] = 0;
 			}
+
+
+			// Let's print the cost function on the image with a black line.
+			uint16_t x_cost = (cost[y] - lowest_cost) / highest_cost * image_w;
+			PRINT("x_cost = %d", x_cost);
+			buffer[y * 2 * img->w + 2 * x_cost + 1] = 0;
 
 		}
 
@@ -390,8 +392,8 @@ void draw_on_image(
 
 // TODO: Do we really need to implement this ourselves?
 int16_t arr_max_int16_t(int16_t arr[image_h], uint16_t length) {
-	int16_t max = -32000;  // There must be a better way.
-	for (uint16_t i = 0; i < length; i++) {
+	int16_t max = arr[0];
+	for (uint16_t i = 1; i < length; i++) {
 		if (arr[i] > max) {
 			max = arr[i];
 		}
@@ -402,8 +404,8 @@ int16_t arr_max_int16_t(int16_t arr[image_h], uint16_t length) {
 
 
 int16_t arr_min_int16_t(int16_t arr[image_h], uint16_t length) {
-	int16_t min = 32000;  // There must be a better way.
-	for (uint16_t i = 0; i < length; i++) {
+	int16_t min = arr[0];
+	for (uint16_t i = 1; i < length; i++) {
 		if (arr[i] < min) {
 			min = arr[i];
 		}
