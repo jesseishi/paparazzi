@@ -355,8 +355,9 @@ void draw_on_image(
 
 	// We want to show the parts that we detect but also the cost function.
 	// For each heading we'll draw a black pixel for the cost normalized on image_w.
-	int16_t highest_cost = (int16_t) arr_max_int16_t(cost, image_h);
-	int16_t lowest_cost  = (int16_t) arr_min_int16_t(cost, image_h);
+	// Casting this to floats makes the printing of the cost function work correctly. TODO: there must be a better way.
+	float highest_cost = (float) arr_max_int16_t(cost, image_h);
+	float lowest_cost  = (float) arr_min_int16_t(cost, image_h);
 
 	uint8_t *buffer = img->buf;
 
@@ -379,12 +380,21 @@ void draw_on_image(
 				}
 			}
 
-
 			// Let's print the cost function on the image with a black line.
-			uint16_t x_cost = (cost[y] - lowest_cost) / highest_cost * image_w;
-			PRINT("x_cost = %d", x_cost);
-			buffer[y * 2 * img->w + 2 * x_cost + 1] = 0;
+			// Protect against dividing by zero.
+			if ((highest_cost - lowest_cost) != 0) {
+				float x_cost_f = (cost[y] - lowest_cost) / (highest_cost - lowest_cost) * (image_w - 1); // -1 because the index runs _until_ image_w
+				uint16_t x_cost = (uint16_t) x_cost_f;  // TODO: Rounding so it is better represented in the image.
+				PRINT("x_cost");
+				PRINT("%d", x_cost_f);
+				PRINT("%d", x_cost);
+				PRINT("\n");
+				// And protect against accessing the wrong memory.
+				if (x_cost >= 0 && x_cost < image_h) {
+					buffer[y * 2 * img->w + 2 * x_cost + 1] = 255;
 
+				}
+			}
 		}
 
 	return;
