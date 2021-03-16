@@ -21,7 +21,10 @@ enum navigation_state_t navigation_state = AVOID;
 
 float velocityx = 0.0, velocityy = 0.0;
 float heading = 0;
+float avoidance_heading_direction = 1;
+float speed_max = 1.0;
 uint8_t debug_enabled;
+int16_t obstacle_free_confidence = 0;
 abi_event floor_detection_ev;
 
 static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
@@ -48,24 +51,34 @@ void team_11_avoider_periodic(void) {
 	//PRINT("STATE: %d COUNT: %d, X: %d, Y: %d setX: %f, setY: %f \n", navigation_state, floor_count, floor_x, floor_y, xsetting, ysetting);
 	// Only run the mudule if we are in the correct flight mode
 	if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
-		//navigation_state = SEARCH_FOR_SAFE_HEADING;
-		//obstacle_free_confidence = 0;
+		navigation_state = AVOID;
+		obstacle_free_confidence = 0;
 		return;
 	}
-	if (debug_enabled) {
-		stepper_periodic();
-		guidance_h_set_guided_heading(heading);
-	} else {
-		switch (navigation_state) {
+	/*if (debug_enabled) {
+	*	stepper_periodic();
+	*	guidance_h_set_guided_heading(heading);
+	} */
+	switch (navigation_state){
 		case SAFE:
+			velocityx = fminf(obstacle_free_confidence * 0.01f, speed_max);
+			guidance_h_set_guided_body_vel(velocityx, velocityy);
+			obstacle_free_confidence++;
+			if (obstacle_free_confidence <= 0){
+				navigation_state = AVOID;
+			}
 			break;
 		case AVOID:
+			guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(20));
+			obstacle_free_confidence++;
+			if (obstacle_free_confidence >= 20){
+				guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+				navigation_state = SAFE;
+		      	}
 			break;
 		default:
 			break;
-		}
-		return;
 	}
-	guidance_h_set_guided_body_vel(velocityx, velocityy);
+	return;
 }
 

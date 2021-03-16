@@ -63,6 +63,7 @@ enum navigation_state_t navigation_state = SEARCH_FOR_SAFE_HEADING;   // current
 int32_t color_count = 0;                // orange color count from color filter for obstacle detection
 int32_t floor_count = 0;                // green color count from color filter for floor detection
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
+int32_t check = 0;
 float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead if safe.
 
@@ -175,26 +176,28 @@ void orange_avoider_guided_periodic(void)
       break;
     case OUT_OF_BOUNDS:
       // stop
-      guidance_h_set_guided_body_vel(0, 0);
+      guidance_h_set_guided_body_vel(0.1, 0);
 
       // start turn back into arena
-      guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
-
-      navigation_state = REENTER_ARENA;
-
-      break;
-    case REENTER_ARENA:
-      // force floor center to opposite side of turn to head back into arena
+      guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(20));
+      check++;
+      if (check == 20){
+      	guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+      	check = 0;
+      }
       if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-        // return to heading mode
-        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
 
         // reset safe counter
         obstacle_free_confidence = 0;
-
+	check = 0;
+	guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
         // ensure direction is safe before continuing
         navigation_state = SAFE;
-      }
+	}
+      break;
+    case REENTER_ARENA:
+      // force floor center to opposite side of turn to head back into arena
+      
       break;
     default:
       break;
