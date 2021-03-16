@@ -40,4 +40,6 @@ extern uint8_t green_sim_u_high;
 extern uint8_t green_sim_v_low;
 extern uint8_t green_sim_v_high;
 
+extern float magic_scale_factor;
+
 #endif /* SW_AIRBORNE_MODULES_COMPUTER_VISION_CV_DETECT_FLOOR_H_ */

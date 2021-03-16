@@ -59,11 +59,11 @@ uint8_t green_sim_u_high = 120;
 uint8_t green_sim_v_low = 0;
 uint8_t green_sim_v_high = 130;
 
+float magic_scale_factor = 0.01;
+
 static pthread_mutex_t mutex;
 float fd_reference_heading = 0.0;
 
-//typedef bool filtered_image_t[image_h][image_w];
-bool filtered_image[4];  // TODO: Do we need this?
 
 // Declare functions.
 void count_per_heading(bool filtered[image_h][image_w], uint16_t *sum,
@@ -175,8 +175,7 @@ static struct image_t *floor_detector(struct image_t *img) {
 	int16_t best_heading = argmin(cost_rolling_ave);
 
 	// This is the best heading in terms of pixels. Now we should convert this to an actual heading.
-	float magic_scale_factor = 0.1;
-	float fd_reference_heading = (float)(best_heading - image_h / 2)* magic_scale_factor;
+	fd_reference_heading = (float)(best_heading - image_h / 2)* magic_scale_factor;
 
 
 	// Before we return, we put some useful stuff in the image.
@@ -385,12 +384,12 @@ void draw_on_image(
 			if ((highest_cost - lowest_cost) != 0) {
 				float x_cost_f = (cost[y] - lowest_cost) / (highest_cost - lowest_cost) * (image_w - 1); // -1 because the index runs _until_ image_w
 				uint16_t x_cost = (uint16_t) x_cost_f;  // TODO: Rounding so it is better represented in the image.
-				PRINT("x_cost");
+/*				PRINT("x_cost");
 				PRINT("%d", x_cost_f);
 				PRINT("%d", x_cost);
-				PRINT("\n");
+				PRINT("\n");*/ //Commented out to avoid spam
 				// And protect against accessing the wrong memory.
-				if (x_cost >= 0 && x_cost < image_h) {
+				if (x_cost >= 0 && x_cost < image_h) {	//TODO: x_cost>=0 since x_cost is an uint
 					buffer[y * 2 * img->w + 2 * x_cost + 1] = 255;
 
 				}

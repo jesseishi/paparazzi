@@ -17,16 +17,18 @@
 enum navigation_state_t {
 	SAFE, AVOID
 };
-enum navigation_state_t navigation_state = AVOID;
+enum navigation_state_t navigation_state = SAFE;
 
 float velocityx = 0.0, velocityy = 0.0;
 float heading = 0;
+float target_speed = 0.1;
 uint8_t debug_enabled;
 abi_event floor_detection_ev;
-
+float ref_heading=0;
 static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 		float fd_reference_heading) {
-	//PRINT("FLOOR Received: %f\n", test_abi_field);
+	ref_heading = fd_reference_heading;
+	PRINT("FLOOR Received: %f\n", fd_reference_heading);
 }
 
 /*
@@ -48,8 +50,6 @@ void team_11_avoider_periodic(void) {
 	//PRINT("STATE: %d COUNT: %d, X: %d, Y: %d setX: %f, setY: %f \n", navigation_state, floor_count, floor_x, floor_y, xsetting, ysetting);
 	// Only run the mudule if we are in the correct flight mode
 	if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
-		//navigation_state = SEARCH_FOR_SAFE_HEADING;
-		//obstacle_free_confidence = 0;
 		return;
 	}
 	if (debug_enabled) {
@@ -58,14 +58,16 @@ void team_11_avoider_periodic(void) {
 	} else {
 		switch (navigation_state) {
 		case SAFE:
+			velocityx = target_speed;
+			guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi+ref_heading/50.0);
 			break;
 		case AVOID:
 			break;
 		default:
 			break;
 		}
-		return;
 	}
 	guidance_h_set_guided_body_vel(velocityx, velocityy);
+	return;
 }
 
